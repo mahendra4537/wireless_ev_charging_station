@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Level 2 · Smart EV & Parking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1321;
+    --panel:#131a2b;
+    --panel-elevated:#1b2440;
+    --border:#29365a;
+    --text:#eaf0ff;
+    --text-muted:#7d8bb0;
+    --cyan:#4cc9f0;
+    --green:#52d68a;
+    --amber:#e8a33d;
+    --red:#ff6b5b;
+    --gray:#5b6a91;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(76,201,240,0.08), transparent),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(82,214,138,0.06), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:32px 20px 64px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;}
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    margin-bottom:28px;flex-wrap:wrap;gap:14px;
+  }
+  .brand-eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--text-muted);margin:0 0 6px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:28px;font-weight:700;margin:0;
+    letter-spacing:-0.01em;
+  }
+  .conn{
+    display:flex;align-items:center;gap:8px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;
+    color:var(--text-muted);
+    background:var(--panel);border:1px solid var(--border);
+    padding:8px 14px;border-radius:999px;height:fit-content;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);flex-shrink:0;}
+  .dot.live{background:var(--green);box-shadow:0 0 0 0 rgba(82,214,138,.6);animation:pulseDot 2s infinite;}
+  .dot.stale{background:var(--amber);}
+  @keyframes pulseDot{
+    0%{box-shadow:0 0 0 0 rgba(82,214,138,.55);}
+    70%{box-shadow:0 0 0 8px rgba(82,214,138,0);}
+    100%{box-shadow:0 0 0 0 rgba(82,214,138,0);}
+  }
+
+  /* ---------- Availability hero ---------- */
+  .hero{
+    background:linear-gradient(180deg,var(--panel-elevated),var(--panel));
+    border:1px solid var(--border);border-radius:20px;
+    padding:28px 32px;margin-bottom:24px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;
+  }
+  .hero-count{display:flex;align-items:baseline;gap:10px;}
+  .hero-count .num{
+    font-family:'JetBrains Mono',monospace;font-weight:700;
+    font-size:56px;line-height:1;color:var(--green);
+    text-shadow:0 0 24px rgba(82,214,138,.35);
+  }
+  .hero-count .of{
+    font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--text-muted);
+  }
+  .hero-label{font-size:14px;color:var(--text-muted);margin-top:6px;}
+  .hero-legend{display:flex;gap:18px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);}
+  .legend-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+
+  /* ---------- Bay grid ---------- */
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:20px;
+  }
+  .card{
+    position:relative;
+    background:linear-gradient(180deg,var(--panel-elevated),var(--panel));
+    border:1px solid var(--border);border-radius:18px;
+    overflow:hidden;display:flex;flex-direction:column;
+    transition:border-color .3s ease, opacity .3s ease;
+  }
+  .card.locked{opacity:.55;}
+  .card canvas{display:block;width:100%;height:150px;}
+  .card-body{padding:16px 18px 18px;flex:1;display:flex;flex-direction:column;gap:10px;}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .bay-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;margin:0;}
+  .bay-type{font-size:11px;color:var(--text-muted);margin:2px 0 0;}
+  .status-pill{
+    display:inline-flex;align-items:center;gap:6px;flex-shrink:0;
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    padding:5px 10px;border-radius:999px;border:1px solid var(--border);color:var(--text-muted);
+  }
+  .status-pill .dot{background:currentColor;}
+  .meta-row{
+    display:flex;justify-content:space-between;font-size:13px;
+    padding:7px 0;border-top:1px solid var(--border);
+  }
+  .meta-row span:first-child{color:var(--text-muted);}
+  .meta-row span:last-child{font-family:'JetBrains Mono',monospace;font-weight:500;}
+  .coming-soon-note{
+    font-size:12.5px;color:var(--text-muted);line-height:1.5;padding-top:6px;
+    border-top:1px solid var(--border);
+  }
+  .ribbon{
+    position:absolute;top:12px;right:-30px;
+    background:var(--amber);color:#1a1206;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;
+    padding:4px 34px;transform:rotate(35deg);
+  }
+
+  /* ---------- Footer ---------- */
+  .footer-strip{
+    margin-top:24px;font-family:'JetBrains Mono',monospace;font-size:11px;
+    color:var(--text-muted);text-align:center;
+  }
+
+  @media (max-width:480px){
+    .hero{padding:22px 20px;}
+    .hero-count .num{font-size:44px;}
+    h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="brand-eyebrow">Smart Parking &amp; EV Network</p>
+      <h1 id="stationName">Level 2 · EV &amp; Smart Parking</h1>
+    </div>
+    <div class="conn" id="connBadge">
+      <span class="dot" id="connDot"></span>
+      <span id="connText">Connecting…</span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="hero-count">
+        <span class="num" id="availableNum">–</span>
+        <span class="of" id="totalNum">/ 4 available now</span>
+      </div>
+      <p class="hero-label">Live occupancy across all bays on this level</p>
+    </div>
+    <div class="hero-legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--green)"></span>Available</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--cyan)"></span>Charging</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--gray)"></span>Fully charged</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--amber)"></span>Coming soon</div>
+    </div>
+  </div>
+
+  <div class="grid" id="bayGrid"><!-- 4 bay cards injected by JS --></div>
+
+  <p class="footer-strip">Updated live via Firebase Realtime Database</p>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  // ------------------------------------------------------------------
+  // FIREBASE CONFIG
+  // Get these from: Firebase Console -> Project Settings -> General ->
+  // "Your apps" -> Web app -> SDK setup and config. apiKey/appId are
+  // public client identifiers, safe to ship in this file. Actual read
+  // access is controlled by your Realtime Database security rules.
+  // ------------------------------------------------------------------
+  const firebaseConfig = {
+  apiKey: "AIzaSyD9TBymxTzCv-6XMSVeG0uo1wIXar3qvqM",
+  authDomain: "wireless-ev-charging-dd5c8.firebaseapp.com",
+  databaseURL: "https://wireless-ev-charging-dd5c8-default-rtdb.firebaseio.com",
+  projectId: "wireless-ev-charging-dd5c8",
+  storageBucket: "wireless-ev-charging-dd5c8.firebasestorage.app",
+  messagingSenderId: "248466824783",
+  appId: "1:248466824783:web:3df7643a5a448d3886543a",
+  measurementId: "G-VJBJPYT26G"
+};
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const stationRef = ref(db, "/station");
+
+  // ------------------------------------------------------------------
+  // Bay card scaffolding
+  // ------------------------------------------------------------------
+  const BAY_ORDER = ["bay1", "bay2", "bay3", "bay4"];
+  const grid = document.getElementById("bayGrid");
+  const bayScenes = {}; // key -> { renderer, scene, camera, car, ring, lockGroup }
+
+  BAY_ORDER.forEach((key) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.id = `card-${key}`;
+    card.innerHTML = `
+      <canvas id="canvas-${key}"></canvas>
+      <div class="card-body">
+        <div class="card-top">
+          <div>
+            <p class="bay-name" id="name-${key}">Bay</p>
+            <p class="bay-type" id="type-${key}">—</p>
+          </div>
+          <span class="status-pill" id="pill-${key}"><span class="dot"></span><span id="pillText-${key}">—</span></span>
+        </div>
+        <div id="details-${key}"></div>
+      </div>
+    `;
+    grid.appendChild(card);
+    bayScenes[key] = initBayScene(document.getElementById(`canvas-${key}`));
+  });
+
+  // ------------------------------------------------------------------
+  // Three.js: build one small self-contained scene per bay
+  // ------------------------------------------------------------------
+  function initBayScene(canvas) {
+    const width = 320, height = 300; // internal render resolution
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height, false);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, width / height, 0.1, 20);
+    camera.position.set(2.6, 2.1, 2.6);
+    camera.lookAt(0, 0.1, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(3, 4, 2);
+    scene.add(dir);
+
+    // Parking bay floor with painted border lines
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.6, 1.7),
+      new THREE.MeshStandardMaterial({ color: 0x0f1526, roughness: 0.95 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.PlaneGeometry(2.3, 1.4)),
+      new THREE.LineBasicMaterial({ color: 0x4a5a86 })
+    );
+    edges.rotation.x = -Math.PI / 2;
+    edges.position.y = 0.001;
+    scene.add(edges);
+
+    // Pulsing status ring on the ground (color changes with state)
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.62, 40),
+      new THREE.MeshBasicMaterial({ color: 0x52d68a, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.002;
+    scene.add(ring);
+
+    // Low-poly car (hidden until a bay is occupied)
+    const car = buildCar();
+    car.visible = false;
+    scene.add(car);
+
+    // Padlock (shown only for locked / "coming soon" bays)
+    const lockGroup = buildLock();
+    lockGroup.visible = false;
+    scene.add(lockGroup);
+
+    return { renderer, scene, camera, car, ring, lockGroup, clock: 0 };
+  }
+
+  function buildCar() {
+    const group = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x8b98bd, roughness: 0.4, metalness: 0.2, emissive: 0x000000 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0d1321, roughness: 0.2 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x14181f, roughness: 0.8 });
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.32, 0.82), bodyMat);
+    body.position.y = 0.32;
+    group.add(body);
+
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.28, 0.72), glassMat);
+    cabin.position.set(-0.1, 0.62, 0);
+    group.add(cabin);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.14, 16);
+    const positions = [
+      [0.58, 0.17, 0.42], [0.58, 0.17, -0.42],
+      [-0.58, 0.17, 0.42], [-0.58, 0.17, -0.42]
+    ];
+    positions.forEach(([x, y, z]) => {
+      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.position.set(x, y, z);
+      group.add(wheel);
+    });
+
+    group.userData.bodyMat = bodyMat;
+    return group;
+  }
+
+  function buildLock() {
+    const group = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8a33d, roughness: 0.4, metalness: 0.3 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 0.22), mat);
+    body.position.y = 0.35;
+    group.add(body);
+    const shackle = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.055, 10, 20, Math.PI), mat);
+    shackle.position.y = 0.6;
+    shackle.rotation.x = Math.PI;
+    group.add(shackle);
+    return group;
+  }
+
+  const STATE_COLOR = {
+    available: 0x52d68a,
+    charging: 0x4cc9f0,
+    full: 0x8b98bd,
+    locked: 0xe8a33d
+  };
+
+  function applySceneState(sceneObj, state) {
+    const { car, ring, lockGroup } = sceneObj;
+    ring.material.color.setHex(STATE_COLOR[state] ?? 0x52d68a);
+
+    if (state === "locked") {
+      car.visible = false;
+      lockGroup.visible = true;
+      ring.visible = false;
+    } else if (state === "available") {
+      car.visible = false;
+      lockGroup.visible = false;
+      ring.visible = true;
+    } else {
+      // charging or full -> show the car
+      car.visible = true;
+      lockGroup.visible = false;
+      ring.visible = true;
+      const color = state === "charging" ? 0x2a4a5e : 0x3a4258;
+      const emissive = state === "charging" ? 0x1c5a72 : 0x000000;
+      car.userData.bodyMat.color.setHex(state === "charging" ? 0x4cc9f0 : 0x8b98bd);
+      car.userData.bodyMat.emissive.setHex(emissive);
+      car.userData.bodyMat.emissiveIntensity = state === "charging" ? 0.6 : 0;
+    }
+  }
+
+  // Shared render loop for all 4 mini-scenes
+  function animate() {
+    requestAnimationFrame(animate);
+    BAY_ORDER.forEach((key) => {
+      const s = bayScenes[key];
+      s.clock += 0.016;
+      s.car.rotation.y = Math.sin(s.clock * 0.4) * 0.15 + 0.3;
+      if (s.ring.visible) {
+        s.ring.material.opacity = 0.35 + Math.sin(s.clock * 2) * 0.15;
+      }
+      s.renderer.render(s.scene, s.camera);
+    });
+  }
+  animate();
+
+  // ------------------------------------------------------------------
+  // Firebase live data -> UI
+  // ------------------------------------------------------------------
+  const connDot = document.getElementById("connDot");
+  const connText = document.getElementById("connText");
+  let staleTimer = null;
+  const STALE_AFTER_MS = 15000;
+
+  function markLive() {
+    connDot.className = "dot live";
+    connText.textContent = "Live";
+  }
+  function markStale() {
+    connDot.className = "dot stale";
+    connText.textContent = "No recent data";
+  }
+  function resetStaleWatch() {
+    if (staleTimer) clearTimeout(staleTimer);
+    staleTimer = setTimeout(markStale, STALE_AFTER_MS);
+  }
+
+  function pillColor(state) {
+    return { available: "var(--green)", charging: "var(--cyan)", full: "var(--gray)", locked: "var(--amber)", denied: "var(--red)" }[state] || "var(--text-muted)";
+  }
+
+  function renderBay(key, bay) {
+    const card = document.getElementById(`card-${key}`);
+    const nameEl = document.getElementById(`name-${key}`);
+    const typeEl = document.getElementById(`type-${key}`);
+    const pill = document.getElementById(`pill-${key}`);
+    const pillText = document.getElementById(`pillText-${key}`);
+    const details = document.getElementById(`details-${key}`);
+
+    if (!bay) return;
+
+    const locked = bay.locked === true;
+    let state = "available";
+    if (locked) state = "locked";
+    else if (bay.status === "Fully Charged") state = "full";
+    else if (bay.status === "Charging") state = "charging";
+    else if (bay.status === "Access Denied") state = "denied";
+
+    card.classList.toggle("locked", locked);
+    nameEl.textContent = bay.label || key.toUpperCase();
+    typeEl.textContent = locked ? "Not installed yet" : (bay.type === "rfid_gated" ? "Reserved · RFID access" : "Plug & Charge · Sensor bay");
+    pill.style.color = pillColor(state);
+    pillText.textContent = locked ? "Coming soon" : (bay.status || "—");
+
+    applySceneState(bayScenes[key], state === "denied" ? "available" : state);
+
+    if (locked) {
+      card.querySelector(".ribbon")?.remove();
+      const ribbon = document.createElement("div");
+      ribbon.className = "ribbon";
+      ribbon.textContent = "Soon";
+      card.appendChild(ribbon);
+      details.innerHTML = `<p class="coming-soon-note">This bay is part of the next phase of the charging network rollout. Check back soon.</p>`;
+      return;
+    }
+    card.querySelector(".ribbon")?.remove();
+
+    if (state === "charging" || state === "full") {
+      details.innerHTML = `
+        <div class="meta-row"><span>Vehicle</span><span>${bay.vehicle || "Guest"}</span></div>
+        <div class="meta-row"><span>Battery</span><span>${bay.battery ?? 0}%</span></div>
+        <div class="meta-row"><span>Charging speed</span><span>${bay.chargingSpeed ?? "—"} kW</span></div>
+        <div class="meta-row"><span>Time remaining</span><span>${bay.estimatedTime || "—"}</span></div>
+      `;
+    } else {
+      details.innerHTML = `
+        <div class="meta-row"><span>Status</span><span>${bay.status || "Available"}</span></div>
+        <div class="meta-row"><span>Access</span><span>${bay.type === "rfid_gated" ? "Tap RFID card" : "Park to start"}</span></div>
+      `;
+    }
+  }
+
+  onValue(stationRef, (snapshot) => {
+    const data = snapshot.val();
+    resetStaleWatch();
+    markLive();
+    if (!data) return;
+
+    if (data.meta?.name) {
+      document.getElementById("stationName").textContent = data.meta.name;
+    }
+    document.getElementById("availableNum").textContent = data.meta?.availableNow ?? "–";
+    document.getElementById("totalNum").textContent = `/ ${data.meta?.totalBays ?? 4} available now`;
+
+    BAY_ORDER.forEach((key) => renderBay(key, data.slots?.[key]));
+  }, (error) => {
+    console.error("Firebase read failed:", error);
+    markStale();
+    connText.textContent = "Connection error";
+  });
+
+  resetStaleWatch();
+</script>
+</body>
+</html>
